@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:absent_detector/Login/screens/home_screen.dart';
+import 'package:absent_detector/Home/home_page.dart';
 import 'dart:math' as math;
 
 class WelcomePage extends StatefulWidget {

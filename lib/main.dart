@@ -1,29 +1,12 @@
-import 'package:absent_detector/Login/screens/signin_screen.dart';
-import 'package:absent_detector/Login/screens/welcome_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:camera/camera.dart';
+import 'app.dart'; // <- this is your correct app entry with camera support
 
-void main() {
-  runApp(const MyApp());
+late List<CameraDescription> cameras;
+
+
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  cameras = await availableCameras(); // ✅ get cameras before runApp
+  runApp(MyApp(cameras: cameras)); // ✅ pass cameras to your main app
 }
-
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
-  // This widget is the root of your application.
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Flutter Demo',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-      ),
-      home: const WelcomePage(),
-      routes: {
-        '/login': (context) => const AnimatedWelcomeWithLogin(),
-      },
-    );
-  }
-}
-
-
-
