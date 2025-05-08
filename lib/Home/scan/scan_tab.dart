@@ -7,7 +7,13 @@ import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
 
 class ScanTab extends StatefulWidget {
   final List<CameraDescription> cameras;
-  const ScanTab({super.key, required this.cameras});
+  final List<String> studentList;
+
+  const ScanTab({
+    super.key, 
+    required this.cameras,
+    required this.studentList,
+  });
 
   @override
   State<ScanTab> createState() => _ScanTabState();

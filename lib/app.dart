@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:camera/camera.dart';
 import 'Home/home_page.dart';
+import 'Login/screens/welcome_screen.dart';
 
 class MyApp extends StatelessWidget {
   final List<CameraDescription> cameras;
@@ -17,7 +18,7 @@ class MyApp extends StatelessWidget {
         scaffoldBackgroundColor: CupertinoColors.systemGroupedBackground,
         primaryContrastingColor: CupertinoColors.white,
       ),
-      home: HomePage(cameras: cameras),
+      home: WelcomePage(),
     );
   }
 }
