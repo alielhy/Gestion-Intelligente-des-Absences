@@ -1,162 +1,305 @@
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
+import '../../utils/attendance_log.dart';
 
-class ReportsTab extends StatelessWidget {
+class ReportsTab extends StatefulWidget {
   const ReportsTab({super.key});
 
   @override
+  State<ReportsTab> createState() => _ReportsTabState();
+}
+
+class _ReportsTabState extends State<ReportsTab> {
+  String _searchQuery = '';
+  DateTime? _selectedDate;
+  bool _showManualOnly = false;
+  bool _showUnknownOnly = false;
+
+  Future<void> _selectDate(BuildContext context) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime(2000),
+      lastDate: DateTime.now(),
+    );
+    if (picked != null && picked != _selectedDate) {
+      setState(() => _selectedDate = picked);
+    }
+  }
+
+  void _showAddManualDialog() {
+    String name = '';
+    showCupertinoDialog(
+      context: context,
+      builder: (context) => CupertinoAlertDialog(
+        title: const Text("Add Manual Entry"),
+        content: CupertinoTextField(
+          placeholder: "Student name",
+          onChanged: (value) => name = value,
+        ),
+        actions: [
+          CupertinoDialogAction(
+            child: const Text("Cancel"),
+            onPressed: () => Navigator.pop(context),
+          ),
+          CupertinoDialogAction(
+            child: const Text("Add"),
+            onPressed: () {
+              if (name.isNotEmpty) {
+                Provider.of<AttendanceLog>(context, listen: false)
+                    .addManualEntry(name);
+                Navigator.pop(context);
+              }
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showExportOptions() {
+    showCupertinoModalPopup(
+      context: context,
+      builder: (context) => CupertinoActionSheet(
+        title: const Text("Export Options"),
+        actions: [
+          CupertinoActionSheetAction(
+            onPressed: () {
+              Navigator.pop(context);
+              Provider.of<AttendanceLog>(context, listen: false)
+                  .exportRecords();
+            },
+            child: const Text("Export as CSV"),
+          ),
+          CupertinoActionSheetAction(
+            onPressed: () {
+              Navigator.pop(context);
+              // Implement PDF export
+            },
+            child: const Text("Export as PDF"),
+          ),
+        ],
+        cancelButton: CupertinoActionSheetAction(
+          child: const Text("Cancel"),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final attendanceLog = Provider.of<AttendanceLog>(context);
+    final filteredRecords = attendanceLog.filterRecords(
+      nameFilter: _searchQuery,
+      dateFilter: _selectedDate,
+      showManualEntries: _showManualOnly ? true : null,
+    );
+
     return CupertinoPageScaffold(
       backgroundColor: CupertinoColors.white,
       navigationBar: CupertinoNavigationBar(
         backgroundColor: CupertinoColors.white,
-        middle: const Text('Reports', style: TextStyle(fontWeight: FontWeight.bold)),
-        trailing: CupertinoButton(
-          padding: EdgeInsets.zero,
-          child: const Icon(CupertinoIcons.ellipsis, color: Color(0xFF0084FF)),
-          onPressed: () {},
+        middle: const Text('Attendance Reports'),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CupertinoButton(
+              padding: EdgeInsets.zero,
+              child: const Icon(CupertinoIcons.share, color: Color(0xFF0084FF)),
+              onPressed: _showExportOptions,
+            ),
+            CupertinoButton(
+              padding: EdgeInsets.zero,
+              child: const Icon(CupertinoIcons.add, color: Color(0xFF0084FF)),
+              onPressed: _showAddManualDialog,
+            ),
+          ],
         ),
       ),
-      child: ListView(
-        children: [
-          const Padding(
-            padding: EdgeInsets.all(16),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Recent Attendance Reports',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-                ),
-                Icon(CupertinoIcons.refresh, color: Color(0xFF0084FF)),
-              ],
-            ),
-          ),
-          SizedBox(
-            height: 100,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              itemCount: 5,
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              itemBuilder: (context, index) {
-                return TweenAnimationBuilder(
-                  tween: Tween<double>(begin: 0.0, end: 1.0),
-                  duration: Duration(milliseconds: 300 + (index * 100)),
-                  builder: (context, double value, child) {
-                    return Transform.translate(
-                      offset: Offset(0, 20 * (1 - value)),
-                      child: Opacity(
-                        opacity: value,
-                        child: child,
+      child: SafeArea(
+        child: Column(
+          children: [
+            // Search and filter bar
+            Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                children: [
+                  CupertinoSearchTextField(
+                    placeholder: "Search students...",
+                    onChanged: (value) => setState(() => _searchQuery = value),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: CupertinoButton(
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          color: CupertinoColors.systemGrey5,
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(CupertinoIcons.calendar, size: 18),
+                              const SizedBox(width: 4),
+                              Text(
+                                _selectedDate == null
+                                    ? "All dates"
+                                    : DateFormat('MMM d, y').format(_selectedDate!),
+                                style: const TextStyle(fontSize: 14),
+                              ),
+                            ],
+                          ),
+                          onPressed: () => _selectDate(context),
+                        ),
                       ),
-                    );
-                  },
-                  child: GestureDetector(
-                    onTap: () {},
-                    child: Container(
-                      width: 70,
-                      margin: const EdgeInsets.symmetric(horizontal: 8),
-                      child: Column(
-                        children: [
-                          Container(
-                            width: 60,
-                            height: 60,
+                      const SizedBox(width: 8),
+                      CupertinoButton(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        color: _showManualOnly 
+                            ? CupertinoColors.activeBlue 
+                            : CupertinoColors.systemGrey5,
+                        child: const Text("Manual", style: TextStyle(fontSize: 14)),
+                        onPressed: () => setState(() => _showManualOnly = !_showManualOnly),
+                      ),
+                      const SizedBox(width: 8),
+                      CupertinoButton(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        color: _showUnknownOnly 
+                            ? CupertinoColors.activeBlue 
+                            : CupertinoColors.systemGrey5,
+                        child: const Text("Unknown", style: TextStyle(fontSize: 14)),
+                        onPressed: () => setState(() => _showUnknownOnly = !_showUnknownOnly),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+
+            // Summary cards
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Row(
+                children: [
+                  _buildSummaryCard(
+                    "Present",
+                    attendanceLog.recognizedStudents.length,
+                    CupertinoColors.activeGreen,
+                  ),
+                  const SizedBox(width: 8),
+                  _buildSummaryCard(
+                    "Unknown",
+                    attendanceLog.unknownCount,
+                    CupertinoColors.systemGrey,
+                  ),
+                  const SizedBox(width: 8),
+                  _buildSummaryCard(
+                    "Total",
+                    attendanceLog.records.length,
+                    CupertinoColors.activeBlue,
+                  ),
+                ],
+              ),
+            ),
+
+            // Attendance records list
+            Expanded(
+              child: filteredRecords.isEmpty
+                  ? const Center(
+                      child: Text(
+                        "No matching records found",
+                        style: TextStyle(color: CupertinoColors.systemGrey),
+                      ),
+                    )
+                  : ListView.builder(
+                      itemCount: filteredRecords.length,
+                      itemBuilder: (context, index) {
+                        final record = filteredRecords[index];
+                        return CupertinoListTile(
+                          title: Text(record.name),
+                          subtitle: Text(
+                            DateFormat('MMM d, y • h:mm a').format(record.timestamp),
+                          ),
+                          leading: Container(
+                            width: 36,
+                            height: 36,
                             decoration: BoxDecoration(
-                              border: Border.all(
-                                color: index == 0 
-                                    ? const Color(0xFF0084FF) 
-                                    : CupertinoColors.systemGrey4,
-                                width: 2,
-                              ),
-                              borderRadius: BorderRadius.circular(30),
+                              color: record.name.toLowerCase() == 'unknown'
+                                  ? CupertinoColors.systemGrey.withOpacity(0.1)
+                                  : record.isManualEntry
+                                      ? CupertinoColors.activeOrange.withOpacity(0.1)
+                                      : const Color(0xFF0084FF).withOpacity(0.1),
+                              shape: BoxShape.circle,
                             ),
-                            child: Container(
-                              margin: const EdgeInsets.all(2),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF0084FF).withOpacity(0.2),
-                                borderRadius: BorderRadius.circular(28),
-                              ),
-                              child: const Center(
-                                child: Icon(CupertinoIcons.doc_chart_fill, color: Color(0xFF0084FF)),
-                              ),
+                            child: Icon(
+                              record.name.toLowerCase() == 'unknown'
+                                  ? CupertinoIcons.question
+                                  : record.isManualEntry
+                                      ? CupertinoIcons.pencil
+                                      : CupertinoIcons.person_fill,
+                              size: 18,
+                              color: record.name.toLowerCase() == 'unknown'
+                                  ? CupertinoColors.systemGrey
+                                  : record.isManualEntry
+                                      ? CupertinoColors.activeOrange
+                                      : const Color(0xFF0084FF),
                             ),
                           ),
-                          const SizedBox(height: 8),
-                          Text(
-                            index == 0 ? 'Your Report' : 'Class ${index}',
-                            textAlign: TextAlign.center,
-                            overflow: TextOverflow.ellipsis,
+                          trailing: Text(
+                            record.isManualEntry ? "Manual" : "Detected",
                             style: TextStyle(
-                              fontSize: 12,
-                              color: index == 0 
-                                  ? const Color(0xFF0084FF) 
+                              color: record.isManualEntry
+                                  ? CupertinoColors.activeOrange
                                   : CupertinoColors.systemGrey,
                             ),
                           ),
-                        ],
-                      ),
+                        );
+                      },
                     ),
-                  ),
-                );
-              },
             ),
-          ),
-          CupertinoListSection(
-            children: [],
-          ),
-          ...List.generate(3, (index) {
-            return TweenAnimationBuilder(
-              tween: Tween<double>(begin: 0.0, end: 1.0),
-              duration: Duration(milliseconds: 500 + (index * 100)),
-              builder: (context, double value, child) {
-                return Transform.translate(
-                  offset: Offset(50 * (1 - value), 0),
-                  child: Opacity(
-                    opacity: value,
-                    child: child,
-                  ),
-                );
-              },
-              child: Container(
-                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                decoration: BoxDecoration(
-                  color: CupertinoColors.white,
-                  borderRadius: BorderRadius.circular(8),
-                  boxShadow: [
-                    BoxShadow(
-                      color: CupertinoColors.systemGrey6,
-                      blurRadius: 5,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: CupertinoListTile(
-                  padding: const EdgeInsets.all(12),
-                  leading: Container(
-                    width: 50,
-                    height: 50,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF0084FF).withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(25),
-                    ),
-                    child: const Icon(CupertinoIcons.chart_bar_fill, color: Color(0xFF0084FF)),
-                  ),
-                  title: Text(
-                    'Monthly Report ${index + 1}',
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  subtitle: Text(
-                    'Oct ${index + 10}, 2023 • ${95 - index}% attendance',
-                    style: const TextStyle(color: CupertinoColors.systemGrey),
-                  ),
-                  trailing: const Icon(
-                    CupertinoIcons.chevron_right,
-                    color: Color(0xFF0084FF),
-                  ),
-                ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSummaryCard(String title, int count, Color color) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: CupertinoColors.white,
+          borderRadius: BorderRadius.circular(8),
+          boxShadow: [
+            BoxShadow(
+              color: CupertinoColors.systemGrey5.withOpacity(0.3),
+              blurRadius: 2,
+              offset: const Offset(0, 1),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: 12,
+                color: CupertinoColors.systemGrey,
               ),
-            );
-          }),
-        ],
+            ),
+            Text(
+              count.toString(),
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: color,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

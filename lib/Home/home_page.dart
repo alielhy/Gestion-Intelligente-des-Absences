@@ -12,9 +12,19 @@ import 'package:absent_detector/Login/screens/welcome_screen.dart';
 
 class HomePage extends StatefulWidget {
   final List<CameraDescription> cameras;
-  final String token; // Add token for authenticated requests
+  final String token;
+  final String initialName;
+  final String initialEmail;
+  final String initialRole;
 
-  const HomePage({super.key, required this.cameras, required this.token});
+  const HomePage({
+    super.key, 
+    required this.cameras, 
+    required this.token,
+    required this.initialName,
+    required this.initialEmail,
+    required this.initialRole,
+  });
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -40,13 +50,19 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
       }
     });
 
+    // Initialize with provided values
+    teacherName = widget.initialName;
+    teacherEmail = widget.initialEmail;
+    teacherRole = widget.initialRole;
+    isLoading = false;
+
     // Fetch profile data
     _fetchProfileData();
   }
 
   Future<void> _fetchProfileData() async {
     final response = await http.get(
-      Uri.parse('http://10.0.2.2:5000/signin'), // Replace with your API URL
+      Uri.parse('http://192.168.100.66:5000/signin'), // Replace with your API URL
       headers: {
         'Authorization': 'Bearer ${widget.token}',
       },

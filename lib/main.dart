@@ -1,12 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
-import 'app.dart'; // <- this is your correct app entry with camera support
+import 'app.dart';
 
 late List<CameraDescription> cameras;
 
-
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  cameras = await availableCameras(); // ✅ get cameras before runApp
-  runApp(MyApp(cameras: cameras)); // ✅ pass cameras to your main app
+  
+  try {
+    cameras = await availableCameras();
+    runApp(MyApp(cameras: cameras));
+  } catch (e) {
+    // Handle camera initialization errors
+    runApp(
+      MaterialApp(
+        home: Scaffold(
+          body: Center(
+            child: Text('Failed to initialize camera: $e'),
+          ),
+        ),
+      ),
+    );
+  }
 }

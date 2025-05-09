@@ -64,7 +64,7 @@ class _LoginPanelState extends State<LoginPanel> {
 
     setState(() { _isLoading = true; });
 
-    final url = Uri.parse('http://10.0.2.2:5000/signin');
+    final url = Uri.parse('http://192.168.100.66:5000/signin');
 
     try {
       final response = await http.post(
@@ -81,12 +81,18 @@ class _LoginPanelState extends State<LoginPanel> {
 
       if (response.statusCode == 200 && data['professor'] != null) {
         setState(() { _isLoading = false; });
+        final professor = data['professor'];
+        print('Professor data: $professor');
+        
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
             builder: (_) => HomePage(
               cameras: cameras,
-              token: '',
+              token: professor['id'].toString(),
+              initialName: '${professor['firstName']} ${professor['lastName']}',
+              initialEmail: professor['gmailAcademique'],
+              initialRole: professor['role'],
             ),
           ),
         );
