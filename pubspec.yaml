@@ -43,6 +43,9 @@ dependencies:
   flutter_secure_storage: ^9.2.4
   image_picker: ^1.0.7
   permission_handler: ^11.3.0
+  file_selector: ^1.0.3
+  csv: ^5.0.2
+  syncfusion_flutter_pdf: ^24.2.8
 
 dev_dependencies:
   flutter_test:
