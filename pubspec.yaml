@@ -46,10 +46,15 @@ dependencies:
   file_selector: ^1.0.3
   csv: ^5.0.2
   syncfusion_flutter_pdf: ^24.2.8
+  pdf: ^3.10.0
+  printing: ^5.6.0
+  share_plus: ^7.0.1
+  
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  flutter_launcher_icons: ^0.13.1
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is
@@ -99,3 +104,10 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: true
+  image_path: "assets/images/logo.png"
+  min_sdk_android: 21 # Optional: Set minimum Android SDK
+  adaptive_icon_background: "#FFFFFF" # Optional: For Android adaptive icons
+  adaptive_icon_foreground: "assets/images/logo.png" # Optional: For Android adaptive icons  

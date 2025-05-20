@@ -20,6 +20,7 @@ class MyApp extends StatelessWidget {
       ],
       child: CupertinoApp(
         debugShowCheckedModeBanner: false,
+        navigatorKey: navigatorKey, // Attach navigatorKey
         theme: const CupertinoThemeData(
           primaryColor: Color(0xFF0084FF),
           barBackgroundColor: CupertinoColors.white,
@@ -27,24 +28,25 @@ class MyApp extends StatelessWidget {
           primaryContrastingColor: CupertinoColors.white,
         ),
         home: FutureBuilder(
-          future: _initializeApp(),
+          future: _initializeApp(context),
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.done) {
               return const WelcomePage();
             }
-            return const CupertinoPageScaffold(
-              child: Center(child: CupertinoActivityIndicator()),
-            );
+            return const Center(child: CircularProgressIndicator());
           },
         ),
       ),
     );
   }
 
-  Future<void> _initializeApp() async {
-    // Initialize any necessary services here
-    await Provider.of<AttendanceLog>(navigatorKey.currentContext!, listen: false)
-        .initialize();
+  Future<void> _initializeApp(BuildContext context) async {
+    // Initialize services safely
+    try {
+      await Provider.of<AttendanceLog>(context, listen: false).initialize();
+    } catch (e) {
+      print("Error initializing AttendanceLog: $e");
+    }
   }
 }
 

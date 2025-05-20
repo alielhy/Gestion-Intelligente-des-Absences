@@ -5,20 +5,16 @@ import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
-import 'package:path/path.dart' as path;
 import 'package:image/image.dart' as img;
 import 'package:provider/provider.dart';
 import '../../utils/attendance_log.dart';
 
-
 class ScanTab extends StatefulWidget {
   final List<CameraDescription> cameras;
-  final List<String> studentList;
 
   const ScanTab({
-    super.key, 
+    super.key,
     required this.cameras,
-    required this.studentList,
   });
 
   @override
@@ -35,8 +31,7 @@ class _ScanTabState extends State<ScanTab> {
   List<Face> _currentFaces = [];
   List<String> _recognizedNames = [];
   bool _isProcessing = false;
-  final Set<String> _sessionRecognizedNames = {}; // To avoid duplicates
-
+  final Set<String> _sessionRecognizedNames = {};
 
   @override
   void initState() {
@@ -95,14 +90,9 @@ class _ScanTabState extends State<ScanTab> {
     try {
       var request = http.MultipartRequest(
         'POST',
-        Uri.parse('http://192.168.100.66:5000/recognize_multiple'),
+        Uri.parse('http://172.20.10.6:5000/recognize_multiple'),
       );
-
-      request.files.add(await http.MultipartFile.fromPath(
-        'image',
-        imagePath,
-      ));
-
+      request.files.add(await http.MultipartFile.fromPath('image', imagePath));
       var response = await request.send();
 
       if (response.statusCode == 200) {
@@ -139,7 +129,6 @@ class _ScanTabState extends State<ScanTab> {
 
     final croppedFile = File('${originalImage.path}_cropped.jpg');
     await croppedFile.writeAsBytes(img.encodeJpg(croppedImage));
-
     return croppedFile;
   }
 
@@ -192,7 +181,6 @@ class _ScanTabState extends State<ScanTab> {
 
   Future<void> _handleRecognizedNames(List<String> names) async {
     final newNames = <String>[];
-
     for (final name in names) {
       if (!_sessionRecognizedNames.contains(name)) {
         _sessionRecognizedNames.add(name);
@@ -224,7 +212,7 @@ class _ScanTabState extends State<ScanTab> {
         final index = entry.key;
         final face = entry.value;
         final rect = face.boundingBox;
-        
+
         String name = 'Unknown';
         if (index < _recognizedNames.length) {
           name = _recognizedNames[index];

@@ -6,6 +6,9 @@ import 'dart:convert';
 import 'dashboard/dashboard_tab.dart';
 import 'teachers/teachers_tab.dart';
 import 'profile/admin_profile_tab.dart';
+import '../Home/classes/classes_tab.dart';
+import '../Home/scan/scan_tab.dart';
+import '../Home/reports/reports_tab.dart';
 import '../Login/screens/welcome_screen.dart';
 
 class AdminHomePage extends StatefulWidget {
@@ -28,11 +31,10 @@ class AdminHomePage extends StatefulWidget {
   State<AdminHomePage> createState() => _AdminHomePageState();
 }
 
-class _AdminHomePageState extends State<AdminHomePage> with SingleTickerProviderStateMixin {
+class _AdminHomePageState extends State<AdminHomePage> {
   int _selectedIndex = 0;
   late List<Widget> _pages;
-  late TabController _tabController;
-  
+
   String adminName = '';
   String adminEmail = '';
   String adminRole = '';
@@ -41,13 +43,6 @@ class _AdminHomePageState extends State<AdminHomePage> with SingleTickerProvider
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
-    _tabController.addListener(() {
-      if (!_tabController.indexIsChanging) {
-        setState(() => _selectedIndex = _tabController.index);
-      }
-    });
-
     // Initialize with provided values
     adminName = widget.initialName;
     adminEmail = widget.initialEmail;
@@ -60,7 +55,7 @@ class _AdminHomePageState extends State<AdminHomePage> with SingleTickerProvider
 
   Future<void> _fetchAdminProfileData() async {
     final response = await http.get(
-      Uri.parse('http://192.168.100.66:5000/signin'),
+      Uri.parse('http://172.20.10.6:5000/signin'),
       headers: {
         'Authorization': 'Bearer ${widget.token}',
       },
@@ -82,72 +77,74 @@ class _AdminHomePageState extends State<AdminHomePage> with SingleTickerProvider
   }
 
   @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    return CupertinoTabScaffold(
-      tabBar: CupertinoTabBar(
-        currentIndex: _selectedIndex,
-        onTap: (index) {
-          setState(() => _selectedIndex = index);
-          _tabController.animateTo(index, 
-            duration: const Duration(milliseconds: 300), 
-            curve: Curves.easeInOut);
-        },
-        activeColor: const Color(0xFF0084FF),
-        inactiveColor: CupertinoColors.systemGrey,
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(CupertinoIcons.chart_bar_fill),
-            label: 'Dashboard',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(CupertinoIcons.person_2_fill),
-            label: 'Teachers',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(CupertinoIcons.doc_chart_fill),
-            label: 'Reports',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(CupertinoIcons.person_fill),
-            label: 'Profile',
-          ),
-        ],
-      ),
-      tabBuilder: (context, index) {
-        if (isLoading) {
-          return CupertinoTabView(
-            builder: (context) => const Center(child: CupertinoActivityIndicator()),
+    _pages = [
+      ClassesTab(cameras: []),
+      ReportsTab(),
+      ScanTab(cameras: [],),
+      DashboardTab(token: widget.token),
+      TeachersTab(token: widget.token, adminApiKey: widget.token),
+      AdminProfileTab(
+        token: widget.token,
+        adminName: adminName,
+        adminEmail: adminEmail,
+        adminRole: adminRole,
+        onLogout: () {
+          Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
+            CupertinoPageRoute(builder: (_) => WelcomePage()),
+            (route) => false,
           );
-        }
+        },
+      ),
+    ];
 
-        _pages = [
-          DashboardTab(token: widget.token),
-          TeachersTab(token: widget.token, userId: widget.userId),
-          AdminProfileTab(
-            token: widget.token,
-            userId: widget.userId,
-            adminName: adminName,
-            adminEmail: adminEmail,
-            adminRole: adminRole,
-            onLogout: () {
-              Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
-                MaterialPageRoute(builder: (_) => WelcomePage()),
-                (route) => false,
-              );
-            },
-          ),
-        ];
-
-        return CupertinoTabView(
-          builder: (context) => _pages[index],
-        );
-      },
+    return CupertinoPageScaffold(
+      child: isLoading
+          ? Center(child: CupertinoActivityIndicator())
+          : Column(
+              children: [
+                Expanded(
+                  child: _pages[_selectedIndex],
+                ),
+                CupertinoTabBar(
+                  currentIndex: _selectedIndex,
+                  onTap: (index) {
+                    setState(() {
+                      _selectedIndex = index;
+                    });
+                  },
+                  items: const [
+                    
+                    BottomNavigationBarItem(
+                      icon: Icon(CupertinoIcons.book_fill),
+                      label: 'Classes',
+                    ),
+                    BottomNavigationBarItem(
+                      icon: Icon(CupertinoIcons.doc_text),
+                      label: 'Reports',
+                    ),
+                    BottomNavigationBarItem(
+                      icon: Icon(CupertinoIcons.camera_fill),
+                      label: 'Scan',
+                    ),
+                    BottomNavigationBarItem(
+                      icon: Icon(CupertinoIcons.chart_bar_fill),
+                      label: 'Dashboard',
+                    ),
+                    BottomNavigationBarItem(
+                      icon: Icon(CupertinoIcons.person_2_fill),
+                      label: 'Teachers',
+                    ),
+                    
+                    BottomNavigationBarItem(
+                      icon: Icon(CupertinoIcons.person_fill),
+                      label: 'Profile',
+                    ),
+                    
+                  ],
+                ),
+              ],
+            ),
     );
   }
 } 

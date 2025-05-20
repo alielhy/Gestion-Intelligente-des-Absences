@@ -33,7 +33,7 @@ class AuthService {
   // Login method
   static Future<Map<String, dynamic>> login(String email, String password) async {
     final response = await http.post(
-      Uri.parse('http://192.168.100.66:5000/signin'),
+      Uri.parse('http://172.20.10.6:5000/signin'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
         'gmailAcademique': email,

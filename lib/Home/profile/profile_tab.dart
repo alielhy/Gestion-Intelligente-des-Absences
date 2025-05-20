@@ -8,7 +8,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:absent_detector/Home/About/about_page.dart';
 import 'package:absent_detector/Home/About/help_page.dart';
-import 'package:absent_detector/Login/screens/login_panel.dart';
 
 class ProfileTab extends StatefulWidget {
   final String token; // Pass the token that identifies the logged-in user

@@ -4,6 +4,7 @@ import 'package:absent_detector/main.dart' show cameras;
 import 'package:flutter/cupertino.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:absent_detector/Admin/admin_home_page.dart';
 
 
 class LoginPanel extends StatefulWidget {
@@ -64,7 +65,7 @@ class _LoginPanelState extends State<LoginPanel> {
 
     setState(() { _isLoading = true; });
 
-    final url = Uri.parse('http://192.168.100.66:5000/signin');
+    final url = Uri.parse('http://172.20.10.6:5000/signin');
 
     try {
       final response = await http.post(
@@ -80,22 +81,36 @@ class _LoginPanelState extends State<LoginPanel> {
       print('Login response: $data');
 
       if (response.statusCode == 200 && data['professor'] != null) {
-        setState(() { _isLoading = false; });
-        final professor = data['professor'];
-        print('Professor data: $professor');
+        final user = data['professor'];
+        final role = user['role'];
         
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (_) => HomePage(
-              cameras: cameras,
-              token: professor['id'].toString(),
-              initialName: '${professor['firstName']} ${professor['lastName']}',
-              initialEmail: professor['gmailAcademique'],
-              initialRole: professor['role'],
+        if (role == 'admin') {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (_) => AdminHomePage(
+                token: data['token'],
+                userId: user['id'],
+                initialName: '${user['firstName']} ${user['lastName']}',
+                initialEmail: user['gmailAcademique'],
+                initialRole: user['role'],
+              ),
             ),
-          ),
-        );
+          );
+        } else {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (_) => HomePage(
+                cameras: cameras,
+                token: user['id'].toString(),
+                initialName: '${user['firstName']} ${user['lastName']}',
+                initialEmail: user['gmailAcademique'],
+                initialRole: user['role'],
+              ),
+            ),
+          );
+        }
       } else {
         setState(() { _isLoading = false; });
         showCupertinoDialog(

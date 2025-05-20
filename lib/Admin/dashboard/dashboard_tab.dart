@@ -15,10 +15,10 @@ class DashboardTab extends StatefulWidget {
 class _DashboardTabState extends State<DashboardTab> {
   bool isLoading = true;
   Map<String, dynamic> stats = {
-    'totalTeachers': 0,
     'totalStudents': 0,
     'totalClasses': 0,
     'totalScans': 0,
+    'totalProfessors': 0,
   };
 
   @override
@@ -29,25 +29,44 @@ class _DashboardTabState extends State<DashboardTab> {
 
   Future<void> _fetchDashboardStats() async {
     try {
-      final response = await http.get(
-        Uri.parse('http://192.168.100.66:5000/signin'),
+      final responseProfessors = await http.get(
+        Uri.parse('http://172.20.10.6:5000/professors/count'),
         headers: {
           'Authorization': 'Bearer ${widget.token}',
         },
       );
 
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
+      final responseStudents = await http.get(
+        Uri.parse('http://172.20.10.6:5000/students/count'),
+        headers: {
+          'Authorization': 'Bearer ${widget.token}',
+        },
+      );
+
+      if (responseProfessors.statusCode == 200 && responseStudents.statusCode == 200) {
+        final dataProfessors = json.decode(responseProfessors.body);
+        final dataStudents = json.decode(responseStudents.body);
+        
+        int professorCount = dataProfessors['count'];
+        int studentCount = dataStudents['student_count'];
+        
         setState(() {
-          stats = data;
+          stats = {
+            'totalStudents': studentCount,
+            'totalClasses': stats['totalClasses'],
+            'totalScans': stats['totalScans'],
+            'totalProfessors': professorCount,
+          };
           isLoading = false;
         });
       } else {
+        print('Error fetching data: ${responseProfessors.statusCode}, ${responseStudents.statusCode}');
         setState(() {
           isLoading = false;
         });
       }
     } catch (e) {
+      print('Exception occurred: $e');
       setState(() {
         isLoading = false;
       });
@@ -57,72 +76,77 @@ class _DashboardTabState extends State<DashboardTab> {
   @override
   Widget build(BuildContext context) {
     return CupertinoPageScaffold(
+      backgroundColor: CupertinoColors.white,
       navigationBar: const CupertinoNavigationBar(
         middle: Text('Dashboard'),
       ),
-      child: SafeArea(
-        child: isLoading
-            ? const Center(child: CupertinoActivityIndicator())
-            : SingleChildScrollView(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'System Overview',
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    GridView.count(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      crossAxisCount: 2,
-                      mainAxisSpacing: 16,
-                      crossAxisSpacing: 16,
-                      childAspectRatio: 1.5,
+      child: SingleChildScrollView(
+        child: Column(
+          children: [
+            isLoading
+                ? const Center(child: CupertinoActivityIndicator())
+                : SingleChildScrollView(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _buildStatCard(
-                          'Total Teachers',
-                          stats['totalTeachers'].toString(),
-                          CupertinoIcons.person_2_fill,
-                          Colors.blue,
+                        const Text(
+                          'System Overview',
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
-                        _buildStatCard(
-                          'Total Students',
-                          stats['totalStudents'].toString(),
-                          CupertinoIcons.person_3_fill,
-                          Colors.green,
+                        const SizedBox(height: 20),
+                        GridView.count(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          crossAxisCount: 2,
+                          mainAxisSpacing: 16,
+                          crossAxisSpacing: 16,
+                          childAspectRatio: 1.5,
+                          children: [
+                            _buildStatCard(
+                              'Total Students',
+                              stats['totalStudents'].toString(),
+                              CupertinoIcons.person_3_fill,
+                              Colors.green,
+                            ),
+                            _buildStatCard(
+                              'Total Classes',
+                              stats['totalClasses'].toString(),
+                              CupertinoIcons.book_fill,
+                              Colors.orange,
+                            ),
+                            _buildStatCard(
+                              'Total Scans',
+                              stats['totalScans'].toString(),
+                              CupertinoIcons.doc_text_search,
+                              Colors.purple,
+                            ),
+                            _buildStatCard(
+                              'Total Professors',
+                              stats['totalProfessors'].toString(),
+                              CupertinoIcons.person_2_fill,
+                              Colors.red,
+                            ),
+                          ],
                         ),
-                        _buildStatCard(
-                          'Total Classes',
-                          stats['totalClasses'].toString(),
-                          CupertinoIcons.book_fill,
-                          Colors.orange,
+                        const SizedBox(height: 30),
+                        const Text(
+                          'Recent Activity',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
-                        _buildStatCard(
-                          'Total Scans',
-                          stats['totalScans'].toString(),
-                          CupertinoIcons.doc_text_search,
-                          Colors.purple,
-                        ),
+                        const SizedBox(height: 16),
+                        _buildRecentActivityList(),
                       ],
                     ),
-                    const SizedBox(height: 30),
-                    const Text(
-                      'Recent Activity',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    _buildRecentActivityList(),
-                  ],
-                ),
-              ),
+                  ),
+          ],
+        ),
       ),
     );
   }

@@ -62,7 +62,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
 
   Future<void> _fetchProfileData() async {
     final response = await http.get(
-      Uri.parse('http://192.168.100.66:5000/signin'), // Replace with your API URL
+      Uri.parse('http://172.20.10.6:5000/signin'), // Replace with your API URL
       headers: {
         'Authorization': 'Bearer ${widget.token}',
       },
@@ -105,11 +105,11 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
         inactiveColor: CupertinoColors.systemGrey,
         items: const [
           BottomNavigationBarItem(
-            icon: Icon(CupertinoIcons.chat_bubble_2_fill),
+            icon: Icon(CupertinoIcons.book_fill),
             label: 'Classes',
           ),
           BottomNavigationBarItem(
-            icon: Icon(CupertinoIcons.clock_fill),
+            icon: Icon(CupertinoIcons.doc_text),
             label: 'Reports',
           ),
           BottomNavigationBarItem(
@@ -133,8 +133,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
           ClassesTab(cameras: widget.cameras),
           const ReportsTab(),
           ScanTab(
-            cameras: widget.cameras,
-            studentList: [], // Add empty list or fetch from backend
+            cameras: widget.cameras,// Add empty list or fetch from backend
           ),
           ProfileTab(
             token: widget.token,

@@ -5,9 +5,13 @@ import 'dart:convert';
 
 class TeachersTab extends StatefulWidget {
   final String token;
-  final int userId;
+  final String adminApiKey;
 
-  const TeachersTab({super.key, required this.token, required this.userId});
+  const TeachersTab({
+    super.key, 
+    required this.token,
+    required this.adminApiKey,
+  });
 
   @override
   State<TeachersTab> createState() => _TeachersTabState();
@@ -16,6 +20,7 @@ class TeachersTab extends StatefulWidget {
 class _TeachersTabState extends State<TeachersTab> {
   bool isLoading = true;
   List<Map<String, dynamic>> teachers = [];
+  final String baseUrl = 'http://172.20.10.6:5000';
 
   @override
   void initState() {
@@ -24,11 +29,13 @@ class _TeachersTabState extends State<TeachersTab> {
   }
 
   Future<void> _fetchTeachers() async {
+    setState(() => isLoading = true);
     try {
       final response = await http.get(
-        Uri.parse('http://192.168.100.66:5000/professors'),
+        Uri.parse('$baseUrl/professors'),
         headers: {
           'Authorization': 'Bearer ${widget.token}',
+          'API-Key': widget.adminApiKey,
         },
       );
 
@@ -39,24 +46,24 @@ class _TeachersTabState extends State<TeachersTab> {
           isLoading = false;
         });
       } else {
-        setState(() {
-          isLoading = false;
-        });
+        _showError('Failed to fetch teachers: ${response.statusCode}');
+        setState(() => isLoading = false);
       }
     } catch (e) {
-      setState(() {
-        isLoading = false;
-      });
+      _showError('Network error: $e');
+      setState(() => isLoading = false);
     }
   }
 
   Future<void> _showAddTeacherDialog() async {
-    final TextEditingController firstNameController = TextEditingController();
-    final TextEditingController lastNameController = TextEditingController();
-    final TextEditingController emailController = TextEditingController();
-    final TextEditingController passwordController = TextEditingController();
-    final TextEditingController matiereController = TextEditingController();
-    final TextEditingController classesController = TextEditingController();
+    final controllers = {
+      'firstName': TextEditingController(),
+      'lastName': TextEditingController(),
+      'email': TextEditingController(),
+      'password': TextEditingController(),
+      'matiere': TextEditingController(),
+      'classes': TextEditingController(),
+    };
 
     await showCupertinoModalPopup(
       context: context,
@@ -65,100 +72,20 @@ class _TeachersTabState extends State<TeachersTab> {
         message: SingleChildScrollView(
           child: Column(
             children: [
-              CupertinoTextField(
-                controller: firstNameController,
-                placeholder: 'First Name',
-                padding: const EdgeInsets.all(12),
-              ),
-              const SizedBox(height: 8),
-              CupertinoTextField(
-                controller: lastNameController,
-                placeholder: 'Last Name',
-                padding: const EdgeInsets.all(12),
-              ),
-              const SizedBox(height: 8),
-              CupertinoTextField(
-                controller: emailController,
-                placeholder: 'Academic Email',
-                keyboardType: TextInputType.emailAddress,
-                padding: const EdgeInsets.all(12),
-              ),
-              const SizedBox(height: 8),
-              CupertinoTextField(
-                controller: passwordController,
-                placeholder: 'Password',
-                obscureText: true,
-                padding: const EdgeInsets.all(12),
-              ),
-              const SizedBox(height: 8),
-              CupertinoTextField(
-                controller: matiereController,
-                placeholder: 'Subject',
-                padding: const EdgeInsets.all(12),
-              ),
-              const SizedBox(height: 8),
-              CupertinoTextField(
-                controller: classesController,
-                placeholder: 'Classes (comma-separated)',
-                padding: const EdgeInsets.all(12),
-              ),
+              _buildTextField(controllers['firstName']!, 'First Name'),
+              _buildTextField(controllers['lastName']!, 'Last Name'),
+              _buildTextField(controllers['email']!, 'Academic Email', 
+                keyboardType: TextInputType.emailAddress),
+              _buildTextField(controllers['password']!, 'Password', 
+                obscureText: true),
+              _buildTextField(controllers['matiere']!, 'Subject'),
+              _buildTextField(controllers['classes']!, 'Classes (comma separated)'),
             ],
           ),
         ),
         actions: [
           CupertinoActionSheetAction(
-            onPressed: () async {
-              try {
-                final response = await http.post(
-                  Uri.parse('http://192.168.100.66:5000/professors/signup'),
-                  headers: {
-                    'Content-Type': 'application/json',
-                  },
-                  body: json.encode({
-                    'firstName': firstNameController.text,
-                    'lastName': lastNameController.text,
-                    'gmailAcademique': emailController.text,
-                    'password': passwordController.text,
-                    'matiere': matiereController.text,
-                    'classes': classesController.text,
-                    'role': 'professor'
-                  }),
-                );
-
-                if (response.statusCode == 201) {
-                  Navigator.pop(context);
-                  _fetchTeachers();
-                } else {
-                  showCupertinoDialog(
-                    context: context,
-                    builder: (context) => CupertinoAlertDialog(
-                      title: const Text('Error'),
-                      content: const Text('Failed to add teacher'),
-                      actions: [
-                        CupertinoDialogAction(
-                          child: const Text('OK'),
-                          onPressed: () => Navigator.pop(context),
-                        ),
-                      ],
-                    ),
-                  );
-                }
-              } catch (e) {
-                showCupertinoDialog(
-                  context: context,
-                  builder: (context) => CupertinoAlertDialog(
-                    title: const Text('Error'),
-                    content: const Text('An error occurred'),
-                    actions: [
-                      CupertinoDialogAction(
-                        child: const Text('OK'),
-                        onPressed: () => Navigator.pop(context),
-                      ),
-                    ],
-                  ),
-                );
-              }
-            },
+            onPressed: () => _addTeacher(controllers, context),
             child: const Text('Add'),
           ),
         ],
@@ -170,13 +97,69 @@ class _TeachersTabState extends State<TeachersTab> {
     );
   }
 
+  Widget _buildTextField(TextEditingController controller, String placeholder, {
+    TextInputType? keyboardType,
+    bool obscureText = false,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: CupertinoTextField(
+        controller: controller,
+        placeholder: placeholder,
+        padding: const EdgeInsets.all(12),
+        keyboardType: keyboardType,
+        obscureText: obscureText,
+        decoration: BoxDecoration(
+          border: Border.all(color: CupertinoColors.systemGrey3),
+          borderRadius: BorderRadius.circular(8),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _addTeacher(
+    Map<String, TextEditingController> controllers, 
+    BuildContext context,
+  ) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/professors'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ${widget.token}',
+          'API-Key': widget.adminApiKey,
+        },
+        body: json.encode({
+          'firstName': controllers['firstName']!.text,
+          'lastName': controllers['lastName']!.text,
+          'gmailAcademique': controllers['email']!.text,
+          'password': controllers['password']!.text,
+          'matiere': controllers['matiere']!.text,
+          'classes': controllers['classes']!.text,
+          'role': 'professor',
+        }),
+      );
+
+      if (response.statusCode == 201) {
+        Navigator.pop(context);
+        _fetchTeachers();
+      } else {
+        _showError('Failed to add teacher: ${response.body}');
+      }
+    } catch (e) {
+      _showError('Error: $e');
+    }
+  }
+
   Future<void> _showEditTeacherDialog(Map<String, dynamic> teacher) async {
-    final TextEditingController firstNameController = TextEditingController(text: teacher['firstName']);
-    final TextEditingController lastNameController = TextEditingController(text: teacher['lastName']);
-    final TextEditingController emailController = TextEditingController(text: teacher['gmailAcademique']);
-    final TextEditingController matiereController = TextEditingController(text: teacher['matiere']);
-    final TextEditingController classesController = TextEditingController(text: teacher['classes']);
-    final TextEditingController passwordController = TextEditingController();
+    final controllers = {
+      'firstName': TextEditingController(text: teacher['firstName']),
+      'lastName': TextEditingController(text: teacher['lastName']),
+      'email': TextEditingController(text: teacher['gmailAcademique']),
+      'password': TextEditingController(),
+      'matiere': TextEditingController(text: teacher['matiere']),
+      'classes': TextEditingController(text: teacher['classes']),
+    };
 
     await showCupertinoModalPopup(
       context: context,
@@ -185,106 +168,20 @@ class _TeachersTabState extends State<TeachersTab> {
         message: SingleChildScrollView(
           child: Column(
             children: [
-              CupertinoTextField(
-                controller: firstNameController,
-                placeholder: 'First Name',
-                padding: const EdgeInsets.all(12),
-              ),
-              const SizedBox(height: 8),
-              CupertinoTextField(
-                controller: lastNameController,
-                placeholder: 'Last Name',
-                padding: const EdgeInsets.all(12),
-              ),
-              const SizedBox(height: 8),
-              CupertinoTextField(
-                controller: emailController,
-                placeholder: 'Academic Email',
-                keyboardType: TextInputType.emailAddress,
-                padding: const EdgeInsets.all(12),
-              ),
-              const SizedBox(height: 8),
-              CupertinoTextField(
-                controller: passwordController,
-                placeholder: 'New Password (leave empty to keep current)',
-                obscureText: true,
-                padding: const EdgeInsets.all(12),
-              ),
-              const SizedBox(height: 8),
-              CupertinoTextField(
-                controller: matiereController,
-                placeholder: 'Subject',
-                padding: const EdgeInsets.all(12),
-              ),
-              const SizedBox(height: 8),
-              CupertinoTextField(
-                controller: classesController,
-                placeholder: 'Classes (comma-separated)',
-                padding: const EdgeInsets.all(12),
-              ),
+              _buildTextField(controllers['firstName']!, 'First Name'),
+              _buildTextField(controllers['lastName']!, 'Last Name'),
+              _buildTextField(controllers['email']!, 'Academic Email',
+                keyboardType: TextInputType.emailAddress),
+              _buildTextField(controllers['password']!, 'New Password (leave empty to keep current)',
+                obscureText: true),
+              _buildTextField(controllers['matiere']!, 'Subject'),
+              _buildTextField(controllers['classes']!, 'Classes (comma separated)'),
             ],
           ),
         ),
         actions: [
           CupertinoActionSheetAction(
-            onPressed: () async {
-              try {
-                final Map<String, dynamic> updateData = {
-                  'firstName': firstNameController.text,
-                  'lastName': lastNameController.text,
-                  'gmailAcademique': emailController.text,
-                  'matiere': matiereController.text,
-                  'classes': classesController.text,
-                  'role': 'professor'
-                };
-
-                if (passwordController.text.isNotEmpty) {
-                  updateData['password'] = passwordController.text;
-                }
-
-                final response = await http.put(
-                  Uri.parse('http://192.168.100.66:5000/professors/${widget.userId}'),
-                  headers: {
-                    'Authorization': 'Bearer ${widget.token}',
-                    'Content-Type': 'application/json',
-                  },
-                  body: json.encode(updateData),
-                );
-
-                if (response.statusCode == 200) {
-                  Navigator.pop(context);
-                  _fetchTeachers();
-                } else {
-                  showCupertinoDialog(
-                    context: context,
-                    builder: (context) => CupertinoAlertDialog(
-                      title: const Text('Error'),
-                      content: const Text('Failed to update teacher'),
-                      actions: [
-                        CupertinoDialogAction(
-                          child: const Text('OK'),
-                          onPressed: () => Navigator.pop(context),
-                        ),
-                      ],
-                    ),
-                  );
-                }
-              } catch (e) {
-                showCupertinoDialog(
-                  context: context,
-                  builder: (context) => CupertinoAlertDialog(
-                    title: const Text('Error'),
-                    content: const Text('An error occurred'),
-                    actions: [
-                      CupertinoDialogAction(
-                        child: const Text('OK'),
-                        onPressed: () => Navigator.pop(context),
-                      ),
-                    ],
-                  ),
-                );
-              }
-            },
+            onPressed: () => _updateTeacher(teacher['id'], controllers, context),
             child: const Text('Update'),
           ),
         ],
@@ -296,47 +193,79 @@ class _TeachersTabState extends State<TeachersTab> {
     );
   }
 
-  Future<void> _deleteTeacher(String teacherId) async {
+  Future<void> _updateTeacher(
+    int id,
+    Map<String, TextEditingController> controllers,
+    BuildContext context,
+  ) async {
+    try {
+      final updateData = {
+        'firstName': controllers['firstName']!.text,
+        'lastName': controllers['lastName']!.text,
+        'gmailAcademique': controllers['email']!.text,
+        'matiere': controllers['matiere']!.text,
+        'classes': controllers['classes']!.text,
+      };
+
+      if (controllers['password']!.text.isNotEmpty) {
+        updateData['password'] = controllers['password']!.text;
+      }
+
+      final response = await http.put(
+        Uri.parse('$baseUrl/professors/$id'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ${widget.token}',
+          'API-Key': widget.adminApiKey,
+        },
+        body: json.encode(updateData),
+      );
+
+      if (response.statusCode == 200) {
+        Navigator.pop(context);
+        _fetchTeachers();
+      } else {
+        _showError('Failed to update teacher: ${response.body}');
+      }
+    } catch (e) {
+      _showError('Error: $e');
+    }
+  }
+
+  Future<void> _deleteTeacher(int id) async {
     try {
       final response = await http.delete(
-        Uri.parse('http://192.168.100.66:5000/professors/$teacherId'),
+        Uri.parse('$baseUrl/professors/$id'),
         headers: {
           'Authorization': 'Bearer ${widget.token}',
+          'API-Key': widget.adminApiKey,
         },
       );
 
       if (response.statusCode == 200) {
         _fetchTeachers();
       } else {
-        showCupertinoDialog(
-          context: context,
-          builder: (context) => CupertinoAlertDialog(
-            title: const Text('Error'),
-            content: const Text('Failed to delete teacher'),
-            actions: [
-              CupertinoDialogAction(
-                child: const Text('OK'),
-                onPressed: () => Navigator.pop(context),
-              ),
-            ],
-          ),
-        );
+        _showError('Failed to delete teacher: ${response.body}');
       }
     } catch (e) {
-      showCupertinoDialog(
-        context: context,
-        builder: (context) => CupertinoAlertDialog(
-          title: const Text('Error'),
-          content: const Text('An error occurred'),
-          actions: [
-            CupertinoDialogAction(
-              child: const Text('OK'),
-              onPressed: () => Navigator.pop(context),
-            ),
-          ],
-        ),
-      );
+      _showError('Error: $e');
     }
+  }
+
+  void _showError(String message) {
+    showCupertinoDialog(
+      context: context,
+      builder: (context) => CupertinoAlertDialog(
+        title: const Text('Error'),
+        content: Text(message),
+        actions: [
+          CupertinoDialogAction(
+            child: const Text('OK'),
+            onPressed: () => Navigator.pop(context),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -377,28 +306,8 @@ class _TeachersTabState extends State<TeachersTab> {
                         ),
                         CupertinoButton(
                           padding: EdgeInsets.zero,
-                          child: const Icon(CupertinoIcons.delete),
-                          onPressed: () => showCupertinoDialog(
-                            context: context,
-                            builder: (context) => CupertinoAlertDialog(
-                              title: const Text('Delete Teacher'),
-                              content: const Text('Are you sure you want to delete this teacher?'),
-                              actions: [
-                                CupertinoDialogAction(
-                                  isDestructiveAction: true,
-                                  onPressed: () {
-                                    Navigator.pop(context);
-                                    _deleteTeacher(teacher['id'].toString());
-                                  },
-                                  child: const Text('Delete'),
-                                ),
-                                CupertinoDialogAction(
-                                  child: const Text('Cancel'),
-                                  onPressed: () => Navigator.pop(context),
-                                ),
-                              ],
-                            ),
-                          ),
+                          child: const Icon(CupertinoIcons.delete, color: CupertinoColors.destructiveRed),
+                          onPressed: () => _confirmDelete(teacher['id']),
                         ),
                       ],
                     ),
@@ -408,4 +317,28 @@ class _TeachersTabState extends State<TeachersTab> {
       ),
     );
   }
-} 
+
+  void _confirmDelete(int id) {
+    showCupertinoDialog(
+      context: context,
+      builder: (context) => CupertinoAlertDialog(
+        title: const Text('Delete Teacher'),
+        content: const Text('Are you sure you want to delete this teacher?'),
+        actions: [
+          CupertinoDialogAction(
+            isDestructiveAction: true,
+            onPressed: () {
+              Navigator.pop(context);
+              _deleteTeacher(id);
+            },
+            child: const Text('Delete'),
+          ),
+          CupertinoDialogAction(
+            child: const Text('Cancel'),
+            onPressed: () => Navigator.pop(context),
+          ),
+        ],
+      ),
+    );
+  }
+}
